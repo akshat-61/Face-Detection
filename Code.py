@@ -1,50 +1,89 @@
 import cv2
-import face_recognition
-import numpy as np
 
-known_face_encodings = []
-known_face_names = []
+# Path to Haar Cascade XML file
+harcascade = "model/haarcascade_frontalface_default.xml"
 
-image_path = "photo.jpg"  # Replace with your known image path
-image_name = "Akshat Srivastava"
+def detect_faces_image(image_path):
+    # Load the image
+    img = cv2.imread(image_path)
+    
+    if img is None:
+        print(f"Error: Image not found at {image_path}")
+        return
+    
+    # Load the Haar Cascade for face detection
+    face_cascade = cv2.CascadeClassifier(harcascade)
+    
+    # Ensure the Haar Cascade was loaded correctly
+    if face_cascade.empty():
+        print(f"Error: Haar cascade file not found at {harcascade}")
+        return
+    
+    # Convert image to grayscale
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # Detect faces in the image
+    faces = face_cascade.detectMultiScale(img_gray, 1.1, 4)
+    
+    # Draw rectangles around detected faces
+    for (x, y, w, h) in faces:
+        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    
+    # Resize the image for display
+    resized_img = cv2.resize(img, (800, 600))
+    
+    # Display the image with detected faces
+    cv2.imshow("Detected Faces", resized_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
-known_image = face_recognition.load_image_file(image_path)
-known_face_encodings.append(face_recognition.face_encodings(known_image)[0])
-known_face_names.append(image_name)
+# Test the face detection on an image
+detect_faces_image(r"C:\Users\aksha\.APersonal\Achivements\Photo.jpg")
 
-video_capture = cv2.VideoCapture(0)  # Use 0 for default camera
+
+# Real-time Face Detection using Webcam
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print("Error: Could not open webcam.")
+    exit()
+
+# Set the video frame width and height
+cap.set(3, 640)  # Width
+cap.set(4, 480)  # Height
 
 while True:
-    ret, frame = video_capture.read()
-    if not ret:
-        print("Error: Failed to capture frame.")
+    # Read a frame from the webcam
+    success, img = cap.read()
+    
+    if not success:
+        print("Error: Could not read frame.")
         break
 
-    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-    rgb_small_frame = small_frame[:, :, ::-1]  # Convert BGR to RGB
+    # Convert the frame to grayscale
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # Load the Haar Cascade for face detection
+    face_cascade = cv2.CascadeClassifier(harcascade)
+    
+    if face_cascade.empty():
+        print(f"Error: Haar cascade file not found at {harcascade}")
+        break
 
-    face_locations = face_recognition.face_locations(rgb_small_frame)
-    face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-
-    for face_encoding, face_location in zip(face_encodings, face_locations):
-        matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-        name = "Unknown"
-
-        if True in matches:
-            first_match_index = matches.index(True)
-            name = known_face_names[first_match_index]
-
-        top, right, bottom, left = face_location
-        top, right, bottom, left = top * 4, right * 4, bottom * 4, left * 4
-
-        cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-
-        cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
-
-    cv2.imshow("Face Detection and Recognition", frame)
-
+    # Detect faces in the frame
+    faces = face_cascade.detectMultiScale(img_gray, 1.1, 4)
+    
+    # Draw rectangles around detected faces
+    for (x, y, w, h) in faces:
+        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    
+    # Display the video frame with detected faces
+    cv2.imshow("Face Detection", img)
+    
+    # Break the loop when 'q' is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-video_capture.release()
+# Release the webcam and close all OpenCV windows
+cap.release()
 cv2.destroyAllWindows()
